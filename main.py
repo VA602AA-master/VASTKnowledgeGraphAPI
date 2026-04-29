@@ -218,9 +218,9 @@ async def get_graph_summary(graph_id: str):
                 "number_of_nodes": graph.number_of_nodes(),
                 "number_of_edges": graph.number_of_edges(),
                 "is_directed": nx.is_directed(graph),
-                "is_weakly_connected": nx.is_weakly_connected(graph) if nx.is_directed(graph) else None,
-                "is_strongly_connected": nx.is_strongly_connected(graph) if nx.is_directed(graph) else None,
-                "is_connected": nx.is_connected(graph) if not nx.is_directed(graph) else None,
+                "is_weakly_connected": nx.is_weakly_connected(graph) if (nx.is_directed(graph) and graph.number_of_nodes() > 0) else None,
+                "is_strongly_connected": nx.is_strongly_connected(graph) if (nx.is_directed(graph) and graph.number_of_nodes() > 0) else None,
+                "is_connected": nx.is_connected(graph) if (not nx.is_directed(graph) and graph.number_of_nodes() > 0) else None,
             },
             "degree_properties": {
                 "average_degree": sum(dict(graph.degree()).values()) / graph.number_of_nodes() if graph.number_of_nodes() > 0 else 0,
