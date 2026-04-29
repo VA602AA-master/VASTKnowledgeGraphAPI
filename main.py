@@ -36,6 +36,62 @@ graph_registry: Dict[str, str] = {}
 default_graph_id = "default"
 
 
+def create_degree_centrality_distribution(graph):
+    """
+    Create a distribution of degree centrality values instead of per-node values.
+    This is more compact and suitable for large graphs.
+    Uses adaptive binning based on actual degree centrality values.
+
+    Returns:
+        A dictionary with bins of degree centrality values and their counts.
+    """
+    degree_centrality_values = list(nx.degree_centrality(graph).values())
+
+    if not degree_centrality_values:
+        return {
+            "stats": {
+                "min": 0,
+                "max": 0,
+                "mean": 0,
+                "median": 0,
+                "total_nodes": 0
+            }
+        }
+
+    # Get min and max values
+    min_val = min(degree_centrality_values)
+    max_val = max(degree_centrality_values)
+
+    # Use adaptive binning based on actual values
+    # Create 10 bins that cover the actual range of values
+    if min_val == max_val:
+        # All values are the same, just use one bin
+        bins = [min_val, min_val]
+    else:
+        # Create 10 evenly spaced bins covering the actual range
+        bins = [min_val + i * (max_val - min_val) / 10 for i in range(11)]
+
+    distribution = {}
+
+    for i in range(len(bins) - 1):
+        lower = bins[i]
+        upper = bins[i + 1]
+        bin_key = f"{lower:.4f}-{upper:.4f}"
+        count = sum(1 for value in degree_centrality_values if lower <= value < upper)
+        distribution[bin_key] = count
+
+    # Add statistics about the distribution
+    distribution["stats"] = {
+        "min": min_val,
+        "max": max_val,
+        "mean": sum(degree_centrality_values) / len(degree_centrality_values),
+        "median": sorted(degree_centrality_values)[len(degree_centrality_values) // 2],
+        "total_nodes": len(degree_centrality_values)
+    }
+
+    return distribution
+
+
 @app.post("/upload/", summary="Upload a NetworkX graph JSON file")
 async def upload_graph(file: UploadFile = File(...)):
     """
@@ -168,7 +224,7 @@ async def get_graph_summary(graph_id: str):
             },
             "degree_properties": {
                 "average_degree": sum(dict(graph.degree()).values()) / graph.number_of_nodes() if graph.number_of_nodes() > 0 else 0,
-                "degree_centrality": dict(nx.degree_centrality(graph)) if graph.number_of_nodes() > 0 else {},
+                "degree_centrality_distribution": create_degree_centrality_distribution(graph) if graph.number_of_nodes() > 0 else {},
             },
             "node_properties": {
                 "node_count": graph.number_of_nodes(),
