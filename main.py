@@ -4,6 +4,7 @@ FastAPI application for handling NetworkX graphs.
 This application provides endpoints for:
 - Uploading JSON files containing NetworkX graphs
 - Retrieving graph summaries by unique ID
+- Setting a default graph that can be accessed without uploading a file
 """
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
@@ -30,6 +31,9 @@ Path(GRAPH_STORAGE_DIR).mkdir(exist_ok=True)
 # Dictionary to map graph IDs to file paths
 # In production, this would be a database
 graph_registry: Dict[str, str] = {}
+
+# Default graph ID - special constant to access the default graph
+default_graph_id = "default"
 
 
 @app.post("/upload/", summary="Upload a NetworkX graph JSON file")
@@ -86,13 +90,54 @@ async def upload_graph(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
 
+@app.post("/set-default/{graph_id}", summary="Set a graph as the default graph")
+async def set_default_graph(graph_id: str):
+    """
+    Set a graph as the default graph that can be accessed without uploading a file.
+
+    Args:
+        graph_id: The unique ID of the graph to set as default, or the filename in graph_storage (without .json extension).
+
+    Returns:
+        Confirmation that the graph is now the default.
+    """
+    # Check if graph ID exists in registry
+    if graph_id in graph_registry:
+        # Graph ID found in registry, use it
+        file_path = graph_registry[graph_id]
+    else:
+        # Graph ID not in registry, check if it's a file in graph_storage
+        # Try with .json extension first
+        file_path = os.path.join(GRAPH_STORAGE_DIR, f"{graph_id}.json")
+        if not os.path.exists(file_path):
+            # Also try without extension (for backward compatibility)
+            file_path = os.path.join(GRAPH_STORAGE_DIR, graph_id)
+            if not os.path.exists(file_path):
+                raise HTTPException(status_code=404, detail="Graph ID not found in registry or storage")
+
+        # Add to registry for future reference
+        graph_registry[graph_id] = file_path
+
+    # Set this graph as the default
+    graph_registry[default_graph_id] = file_path
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "message": "Graph set as default successfully",
+            "default_graph_id": default_graph_id,
+            "graph_id": graph_id
+        }
+    )
+
+
 @app.get("/summary/{graph_id}", summary="Get graph summary by ID")
 async def get_graph_summary(graph_id: str):
     """
     Get a summary of the properties of a NetworkX graph.
 
     Args:
-        graph_id: The unique ID returned when uploading the graph.
+        graph_id: The unique ID returned when uploading the graph, or "default" to access the default graph.
 
     Returns:
         A JSON object containing various properties of the graph.

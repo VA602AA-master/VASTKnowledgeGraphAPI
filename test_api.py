@@ -84,6 +84,24 @@ def test_api_endpoints():
                     print(f"   Directed: {summary['basic_properties']['is_directed']}")
                     print(f"   Average Degree: {summary['degree_properties']['average_degree']:.2f}")
                     print(f"   Top 3 nodes by degree: {summary['node_properties']['nodes_with_highest_degree'][:3]}")
+
+                    # Test 4: Set default graph
+                    print("\n4. Testing set default graph endpoint...")
+                    response = requests.post(f"{base_url}/set-default/{graph_id}")
+                    print(f"   Status: {response.status_code}")
+                    print(f"   Response: {response.json()}")
+
+                    # Test 5: Access default graph
+                    print("\n5. Testing access to default graph...")
+                    response = requests.get(f"{base_url}/summary/default")
+                    print(f"   Status: {response.status_code}")
+                    if response.status_code == 200:
+                        default_summary = response.json()
+                        print(f"   Graph ID: {default_summary['graph_id']}")
+                        print(f"   Nodes: {default_summary['basic_properties']['number_of_nodes']}")
+                        print(f"   Edges: {default_summary['basic_properties']['number_of_edges']}")
+                        print(f"   Message: Successfully accessed default graph!")
+
     except Exception as e:
         print(f"   Error: {e}")
 
