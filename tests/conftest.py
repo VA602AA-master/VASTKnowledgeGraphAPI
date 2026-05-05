@@ -75,7 +75,7 @@ def sample_graph_with_node_types():
 
 
 @pytest.fixture(scope="function")
-def uploaded_graph(client, sample_graph):
+def uploaded_graph(client, sample_graph, graph_storage_dir):
     """Upload a sample graph and return the graph_id."""
     data = nx.node_link_data(sample_graph)
 
@@ -90,6 +90,12 @@ def uploaded_graph(client, sample_graph):
         assert response.status_code == 201
         graph_id = response.json()["graph_id"]
         yield graph_id
+
+        # Remove from graph storage
+        graph_file = Path(graph_storage_dir) / f"{graph_id}.json"
+        if os.path.exists(graph_file):
+            graph_file.unlink()
+
     finally:
         if os.path.exists(temp_file):
             os.unlink(temp_file)

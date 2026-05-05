@@ -15,12 +15,13 @@ import networkx as nx
 import json
 import tempfile
 import os
+from pathlib import Path
 
 
 class TestGraphUpload:
     """Test cases for graph upload functionality."""
 
-    def test_upload_valid_graph(self, client, empty_registry):
+    def test_upload_valid_graph(self, client, empty_registry, graph_storage_dir):
         """Test uploading a valid NetworkX graph."""
         G = nx.Graph()
         G.add_nodes_from([1, 2, 3])
@@ -39,6 +40,11 @@ class TestGraphUpload:
             assert response.status_code == 201
             assert "graph_id" in response.json()
             assert response.json()["message"] == "Graph uploaded successfully"
+
+            graph_id = response.json()["graph_id"]
+            graph_file = Path(graph_storage_dir) / f"{graph_id}.json"
+            if os.path.exists(graph_file):
+                graph_file.unlink()
         finally:
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
@@ -216,7 +222,7 @@ class TestNodeTypes:
         assert "node_type_counts" in result
         assert "total_nodes" in result
 
-    def test_get_node_types_with_actual_types(self, client, sample_graph_with_node_types):
+    def test_get_node_types_with_actual_types(self, client, sample_graph_with_node_types, graph_storage_dir):
         """Test node type counting with a graph that has node types."""
         data = nx.node_link_data(sample_graph_with_node_types)
 
@@ -239,6 +245,10 @@ class TestNodeTypes:
             assert result["node_type_counts"]["Admin"] == 1
             assert result["node_type_counts"]["Service"] == 2
             assert result["total_nodes"] == 5
+
+            graph_file = Path(graph_storage_dir) / f"{graph_id}.json"
+            if os.path.exists(graph_file):
+                graph_file.unlink()
         finally:
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
@@ -266,7 +276,7 @@ class TestEdgeTypes:
         assert "edge_type_counts" in result
         assert "total_edges" in result
 
-    def test_get_edge_types_with_actual_types(self, client, sample_graph):
+    def test_get_edge_types_with_actual_types(self, client, sample_graph, graph_storage_dir):
         """Test edge type counting with a graph that has edge types."""
         data = nx.node_link_data(sample_graph)
 
@@ -289,6 +299,10 @@ class TestEdgeTypes:
             assert result["edge_type_counts"]["Follows"] == 3
             assert result["edge_type_counts"]["Family"] == 2
             assert result["total_edges"] == 7
+
+            graph_file = Path(graph_storage_dir) / f"{graph_id}.json"
+            if os.path.exists(graph_file):
+                graph_file.unlink()
         finally:
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
@@ -376,7 +390,7 @@ class TestHealthCheck:
 class TestEdgeCases:
     """Test edge cases and special scenarios."""
 
-    def test_empty_graph(self, client):
+    def test_empty_graph(self, client, graph_storage_dir):
         """Test uploading and analyzing an empty graph."""
         G = nx.Graph()
         data = nx.node_link_data(G)
@@ -410,11 +424,15 @@ class TestEdgeCases:
             assert response.status_code == 200
             result = response.json()
             assert result["total_edges"] == 0
+
+            graph_file = Path(graph_storage_dir) / f'{graph_id}.json'
+            if os.path.exists(graph_file):
+                graph_file.unlink()
         finally:
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
 
-    def test_graph_with_no_edge_types(self, client):
+    def test_graph_with_no_edge_types(self, client, graph_storage_dir):
         """Test a graph where edges don't have Edge Type attribute."""
         G = nx.Graph()
         G.add_nodes_from([1, 2, 3, 4])
@@ -437,11 +455,15 @@ class TestEdgeCases:
             assert response.status_code == 200
             result = response.json()
             assert result["edge_type_counts"]["Unknown"] == 4
+
+            graph_file = Path(graph_storage_dir) / f'{graph_id}.json'
+            if os.path.exists(graph_file):
+                graph_file.unlink()
         finally:
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
 
-    def test_graph_with_no_node_types(self, client):
+    def test_graph_with_no_node_types(self, client, graph_storage_dir):
         """Test a graph where nodes don't have Node Type attribute."""
         G = nx.Graph()
         G.add_nodes_from([1, 2, 3, 4])
@@ -464,11 +486,15 @@ class TestEdgeCases:
             assert response.status_code == 200
             result = response.json()
             assert result["node_type_counts"]["Unknown"] == 4
+
+            graph_file = Path(graph_storage_dir) / f'{graph_id}.json'
+            if os.path.exists(graph_file):
+                graph_file.unlink()
         finally:
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
 
-    def test_undirected_graph(self, client):
+    def test_undirected_graph(self, client, graph_storage_dir):
         """Test with an undirected graph."""
         G = nx.Graph()
         G.add_nodes_from([1, 2, 3, 4])
@@ -491,6 +517,10 @@ class TestEdgeCases:
             assert response.status_code == 200
             summary = response.json()
             assert summary["basic_properties"]["is_directed"] is False
+
+            graph_file = Path(graph_storage_dir) / f'{graph_id}.json'
+            if os.path.exists(graph_file):
+                graph_file.unlink()
         finally:
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
@@ -499,7 +529,7 @@ class TestEdgeCases:
 class TestComprehensive:
     """Comprehensive integration tests."""
 
-    def test_full_workflow(self, client, empty_registry):
+    def test_full_workflow(self, client, empty_registry, graph_storage_dir):
         """Test a complete workflow from upload to analysis."""
         # 1. Upload a graph
         G = nx.DiGraph()
@@ -572,6 +602,10 @@ class TestComprehensive:
             response = client.get("/edge-types/default")
             assert response.status_code == 200
             assert response.json()["edge_type_counts"]["Friendship"] == 2
+
+            graph_file = Path(graph_storage_dir) / f'{graph_id}.json'
+            if os.path.exists(graph_file):
+                graph_file.unlink()
 
         finally:
             if os.path.exists(temp_file):
