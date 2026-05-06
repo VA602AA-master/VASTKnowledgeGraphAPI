@@ -16,6 +16,12 @@ import os
 import uuid
 from typing import Dict, Any
 from pathlib import Path
+import logging
+
+
+# Log to uvicorn general-purpose server logger
+logger = logging.getLogger('uvicorn.error')
+
 
 app = FastAPI(
     title="NetworkX Graph API",
@@ -283,6 +289,7 @@ async def get_node_type_counts(graph_id: str):
     Returns:
         A JSON object containing the count of nodes for each type.
     """
+    logger.debug("Calling.")
     # Check if graph ID exists in registry
     if graph_id not in graph_registry:
         raise HTTPException(status_code=404, detail="Graph ID not found")
@@ -291,7 +298,9 @@ async def get_node_type_counts(graph_id: str):
         # Load the graph from file
         file_path = graph_registry[graph_id]
         with open(file_path, 'r') as f:
+            logger.debug("Opening file.")
             data = json.load(f)
+            logger.debug("Closing file.")
 
         # Load as NetworkX graph
         graph = nx.node_link_graph(data)
@@ -328,6 +337,7 @@ async def get_edge_type_counts(graph_id: str):
     Returns:
         A JSON object containing the count of edges for each type.
     """
+    logger.debug("Calling.")
     # Check if graph ID exists in registry
     if graph_id not in graph_registry:
         raise HTTPException(status_code=404, detail="Graph ID not found")
@@ -336,7 +346,9 @@ async def get_edge_type_counts(graph_id: str):
         # Load the graph from file
         file_path = graph_registry[graph_id]
         with open(file_path, 'r') as f:
+            logger.debug("Opening file.")
             data = json.load(f)
+            logger.debug("Closing file.")
 
         # Load as NetworkX graph
         graph = nx.node_link_graph(data)
