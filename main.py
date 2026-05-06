@@ -17,6 +17,7 @@ import uuid
 from typing import Dict, Any
 from pathlib import Path
 import logging
+from anyio import open_file
 
 
 # Log to uvicorn general-purpose server logger
@@ -297,11 +298,12 @@ async def get_node_type_counts(graph_id: str):
     try:
         # Load the graph from file
         file_path = graph_registry[graph_id]
-        with open(file_path, 'r') as f:
+        async with await open_file(file_path, 'r') as f:
             logger.debug("Opening file.")
-            data = json.load(f)
+            content = await f.read()
             logger.debug("Closing file.")
 
+        data = json.loads(content)
         # Load as NetworkX graph
         graph = nx.node_link_graph(data)
 
@@ -345,11 +347,12 @@ async def get_edge_type_counts(graph_id: str):
     try:
         # Load the graph from file
         file_path = graph_registry[graph_id]
-        with open(file_path, 'r') as f:
+        async with await open_file(file_path, 'r') as f:
             logger.debug("Opening file.")
-            data = json.load(f)
+            content = await f.read()
             logger.debug("Closing file.")
 
+        data = json.loads(content)
         # Load as NetworkX graph
         graph = nx.node_link_graph(data)
 
