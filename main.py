@@ -123,7 +123,7 @@ async def upload_graph(file: UploadFile = File(...)):
 
         # Validate that it's a NetworkX graph by trying to load it
         try:
-            graph = nx.node_link_graph(data)
+            graph = nx.node_link_graph(data, edges="links" if "links" in data else "edges")
         except Exception as e:
             raise HTTPException(
                 status_code=400,
@@ -152,6 +152,8 @@ async def upload_graph(file: UploadFile = File(...)):
 
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON file")
+    except Exception as e:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
@@ -219,7 +221,7 @@ async def get_graph_summary(graph_id: str):
             data = json.load(f)
 
         # Load as NetworkX graph
-        graph = nx.node_link_graph(data)
+        graph = nx.node_link_graph(data, edges="links" if "links" in data else "edges")
 
         # Calculate graph properties
         summary = {
@@ -294,7 +296,7 @@ async def get_node_type_counts(graph_id: str):
             data = json.load(f)
 
         # Load as NetworkX graph
-        graph = nx.node_link_graph(data)
+        graph = nx.node_link_graph(data, edges="links" if "links" in data else "edges")
 
         # Count nodes by type
         node_type_counts = {}
@@ -339,7 +341,7 @@ async def get_edge_type_counts(graph_id: str):
             data = json.load(f)
 
         # Load as NetworkX graph
-        graph = nx.node_link_graph(data)
+        graph = nx.node_link_graph(data, edges="links" if "links" in data else "edges")
 
         # Count edges by type
         edge_type_counts = {}
